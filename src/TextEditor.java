@@ -1,34 +1,28 @@
-import java.awt.Dimension;
-import java.awt.Toolkit;
+import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 
-import javax.swing.BoxLayout;
-import javax.swing.JButton;
-import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
-import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
-import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 
 public class TextEditor extends JFrame implements ActionListener {
 	private JFrame frame;
 	private JTextArea textArea;
 	private JMenuBar menuBar;
+	private Font defaultFont = new Font("Arial", Font.PLAIN, 16);
+	private int currentFontSize = 16;
 
 	public TextEditor() {
 		initializeEditor();
@@ -37,6 +31,10 @@ public class TextEditor extends JFrame implements ActionListener {
 	private void initializeEditor() {
 		frame = new JFrame("Awesome Text Editor");
 		textArea = new JTextArea();
+		textArea.setFont(defaultFont);
+		textArea.setLineWrap(true); // Default word wrap enabled
+		textArea.setWrapStyleWord(true);
+
 		menuBar = new JMenuBar();
 
 		// FILE MENU
@@ -56,7 +54,6 @@ public class TextEditor extends JFrame implements ActionListener {
 		fileMenu.add(saveItem);
 		fileMenu.addSeparator();
 		fileMenu.add(exitItem);
-
 		menuBar.add(fileMenu);
 
 		// EDIT MENU
@@ -64,41 +61,66 @@ public class TextEditor extends JFrame implements ActionListener {
 		JMenuItem cutItem = new JMenuItem("Cut");
 		JMenuItem copyItem = new JMenuItem("Copy");
 		JMenuItem pasteItem = new JMenuItem("Paste");
-		JMenuItem findReplaceItem = new JMenuItem("Find & Replace");
 
 		cutItem.addActionListener(this);
 		copyItem.addActionListener(this);
 		pasteItem.addActionListener(this);
-		findReplaceItem.addActionListener(this);
 
 		editMenu.add(cutItem);
 		editMenu.add(copyItem);
 		editMenu.add(pasteItem);
-		editMenu.add(findReplaceItem);
-
 		menuBar.add(editMenu);
+
+		// FORMAT MENU
+		JMenu formatMenu = new JMenu("Format");
+		JMenuItem boldItem = new JMenuItem("Bold");
+		JMenuItem italicItem = new JMenuItem("Italic");
+		JMenuItem normalItem = new JMenuItem("Normal");
+
+		boldItem.addActionListener(this);
+		italicItem.addActionListener(this);
+		normalItem.addActionListener(this);
+
+		formatMenu.add(boldItem);
+		formatMenu.add(italicItem);
+		formatMenu.add(normalItem);
+		menuBar.add(formatMenu);
+
+		// VIEW MENU
+		JMenu viewMenu = new JMenu("View");
+		JMenuItem toggleWrapItem = new JMenuItem("Toggle Word Wrap");
+		JMenuItem zoomInItem = new JMenuItem("Zoom In");
+		JMenuItem zoomOutItem = new JMenuItem("Zoom Out");
+		JMenuItem resetZoomItem = new JMenuItem("Reset Zoom");
+
+		toggleWrapItem.addActionListener(this);
+		zoomInItem.addActionListener(this);
+		zoomOutItem.addActionListener(this);
+		resetZoomItem.addActionListener(this);
+
+		viewMenu.add(toggleWrapItem);
+		viewMenu.add(zoomInItem);
+		viewMenu.add(zoomOutItem);
+		viewMenu.add(resetZoomItem);
+		menuBar.add(viewMenu);
 
 		// HELP MENU
 		JMenu helpMenu = new JMenu("Help");
 		JMenuItem aboutItem = new JMenuItem("About");
 
 		aboutItem.addActionListener(this);
-
 		helpMenu.add(aboutItem);
-
 		menuBar.add(helpMenu);
 
 		// Set frame properties
 		frame.setJMenuBar(menuBar);
 		frame.add(new JScrollPane(textArea));
-		frame.setSize(750, 700);
+		frame.setSize(1000, 800);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-		// Center the frame on screen
-		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-		frame.setLocation(screenSize.width / 2 - frame.getWidth() / 2, screenSize.height / 2 - frame.getHeight() / 2);
-
 		frame.setVisible(true);
+
+		// Center frame
+		frame.setLocationRelativeTo(null);
 	}
 
 	public static void main(String[] args) {
@@ -110,28 +132,21 @@ public class TextEditor extends JFrame implements ActionListener {
 		String currentItem = e.getActionCommand();
 
 		switch (currentItem) {
+		case "New" -> textArea.setText("");
+		case "Open" -> openFile();
+		case "Save" -> saveFile();
+		case "Exit" -> System.exit(0);
 		case "Cut" -> textArea.cut();
 		case "Copy" -> textArea.copy();
 		case "Paste" -> textArea.paste();
-		case "New" -> textArea.setText("");
-		case "Save" -> saveFile();
-		case "Open" -> openFile();
-		case "Exit" -> System.exit(0);
-		case "Find & Replace" -> openFindReplaceDialog();
+		case "Bold" -> applyFontStyle(Font.BOLD);
+		case "Italic" -> applyFontStyle(Font.ITALIC);
+		case "Normal" -> applyFontStyle(Font.PLAIN);
+		case "Toggle Word Wrap" -> toggleWordWrap();
+		case "Zoom In" -> zoomIn();
+		case "Zoom Out" -> zoomOut();
+		case "Reset Zoom" -> resetZoom();
 		case "About" -> showAboutDialog();
-		}
-	}
-
-	private void saveFile() {
-		JFileChooser fileChooser = new JFileChooser();
-		int result = fileChooser.showSaveDialog(frame);
-		if (result == JFileChooser.APPROVE_OPTION) {
-			File file = new File(fileChooser.getSelectedFile().getAbsolutePath());
-			try (BufferedWriter bufferWriter = new BufferedWriter(new FileWriter(file, false))) {
-				bufferWriter.write(textArea.getText());
-			} catch (IOException e) {
-				JOptionPane.showMessageDialog(frame, "Error saving file: " + e.getMessage());
-			}
 		}
 	}
 
@@ -139,88 +154,56 @@ public class TextEditor extends JFrame implements ActionListener {
 		JFileChooser fileChooser = new JFileChooser();
 		int result = fileChooser.showOpenDialog(frame);
 		if (result == JFileChooser.APPROVE_OPTION) {
-			File file = new File(fileChooser.getSelectedFile().getAbsolutePath());
-			try (BufferedReader bufferReader = new BufferedReader(new FileReader(file))) {
-				StringBuilder fileContent = new StringBuilder();
-				String line;
-				while ((line = bufferReader.readLine()) != null) {
-					fileContent.append(line).append("\n");
-				}
-				textArea.setText(fileContent.toString());
-			} catch (IOException e) {
-				JOptionPane.showMessageDialog(frame, "Error opening file: " + e.getMessage());
+			try (BufferedReader reader = new BufferedReader(new FileReader(fileChooser.getSelectedFile()))) {
+				textArea.read(reader, null);
+			} catch (IOException ex) {
+				JOptionPane.showMessageDialog(frame, "Error opening file: " + ex.getMessage());
 			}
 		}
 	}
 
-	private void openFindReplaceDialog() {
-		JDialog findReplaceDialog = new JDialog(frame, "Find & Replace", true);
-		findReplaceDialog.setLayout(new BoxLayout(findReplaceDialog.getContentPane(), BoxLayout.Y_AXIS));
-		findReplaceDialog.setSize(400, 200);
-		findReplaceDialog.setLocationRelativeTo(frame);
-
-		// Input fields for Find and Replace
-		JTextField findField = new JTextField();
-		JTextField replaceField = new JTextField();
-		JButton findButton = new JButton("Find");
-		JButton replaceButton = new JButton("Replace");
-
-		JPanel findPanel = new JPanel();
-		findPanel.setLayout(new BoxLayout(findPanel, BoxLayout.Y_AXIS));
-		findPanel.add(new JLabel("Find:"));
-		findPanel.add(findField);
-
-		JPanel replacePanel = new JPanel();
-		replacePanel.setLayout(new BoxLayout(replacePanel, BoxLayout.Y_AXIS));
-		replacePanel.add(new JLabel("Replace with:"));
-		replacePanel.add(replaceField);
-
-		JPanel buttonPanel = new JPanel();
-		buttonPanel.add(findButton);
-		buttonPanel.add(replaceButton);
-
-		// Add panels to dialog
-		findReplaceDialog.add(findPanel);
-		findReplaceDialog.add(replacePanel);
-		findReplaceDialog.add(buttonPanel);
-
-		// Add functionality
-		findButton.addActionListener(action -> {
-			String findText = findField.getText();
-			String content = textArea.getText();
-			if (findText.isEmpty()) {
-				JOptionPane.showMessageDialog(findReplaceDialog, "Please enter text to find.");
-				return;
+	private void saveFile() {
+		JFileChooser fileChooser = new JFileChooser();
+		int result = fileChooser.showSaveDialog(frame);
+		if (result == JFileChooser.APPROVE_OPTION) {
+			try (BufferedWriter writer = new BufferedWriter(new FileWriter(fileChooser.getSelectedFile()))) {
+				textArea.write(writer);
+			} catch (IOException ex) {
+				JOptionPane.showMessageDialog(frame, "Error saving file: " + ex.getMessage());
 			}
-			int index = content.indexOf(findText);
-			if (index != -1) {
-				textArea.select(index, index + findText.length());
-				textArea.requestFocus();
-			} else {
-				JOptionPane.showMessageDialog(findReplaceDialog, "Text not found.");
-			}
-		});
+		}
+	}
 
-		replaceButton.addActionListener(action -> {
-			String findText = findField.getText();
-			String replaceText = replaceField.getText();
-			String content = textArea.getText();
-			if (findText.isEmpty()) {
-				JOptionPane.showMessageDialog(findReplaceDialog, "Please enter text to find.");
-				return;
-			}
-			if (content.contains(findText)) {
-				textArea.setText(content.replace(findText, replaceText));
-				JOptionPane.showMessageDialog(findReplaceDialog, "Text replaced.");
-			} else {
-				JOptionPane.showMessageDialog(findReplaceDialog, "Text not found.");
-			}
-		});
+	private void applyFontStyle(int style) {
+		Font currentFont = textArea.getFont();
+		textArea.setFont(new Font(currentFont.getFontName(), style, currentFont.getSize()));
+	}
 
-		findReplaceDialog.setVisible(true);
+	private void toggleWordWrap() {
+		boolean currentWrapState = textArea.getLineWrap();
+		textArea.setLineWrap(!currentWrapState);
+		JOptionPane.showMessageDialog(frame, "Word Wrap " + (currentWrapState ? "Disabled" : "Enabled"));
+	}
+
+	private void zoomIn() {
+		currentFontSize += 2;
+		textArea.setFont(new Font(textArea.getFont().getFontName(), textArea.getFont().getStyle(), currentFontSize));
+	}
+
+	private void zoomOut() {
+		if (currentFontSize > 8) {
+			currentFontSize -= 2;
+			textArea.setFont(
+					new Font(textArea.getFont().getFontName(), textArea.getFont().getStyle(), currentFontSize));
+		}
+	}
+
+	private void resetZoom() {
+		currentFontSize = 16;
+		textArea.setFont(new Font(textArea.getFont().getFontName(), textArea.getFont().getStyle(), currentFontSize));
 	}
 
 	private void showAboutDialog() {
-		JOptionPane.showMessageDialog(frame, "Awesome Text Editor\nVersion 1.0\nDeveloped by Mr. DIBAKAR with ❤️");
+		JOptionPane.showMessageDialog(frame, "Awesome Text Editor\nVersion 2.2\nDeveloped by Mr. DIBAKAR with ❤️");
 	}
 }
